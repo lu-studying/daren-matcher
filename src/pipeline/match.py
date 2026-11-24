@@ -5,7 +5,25 @@ from src.pipeline.rerank import rerank
 
 
 def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
-    """完整链路：解析 -> 硬过滤 -> 向量召回 -> LLM重排。"""
+    """完整链路：解析 -> 硬过滤 -> 向量召回 -> LLM重排。
+
+    这是项目的业务主入口，界面和评测脚本都调它。
+
+    Args:
+        brief: 用户输入的投放需求原文。
+        use_llm_rerank: False 时跳过重排，results 里只给占位的
+            score=None / reason="未重排"，用于省钱地单独看召回质量。
+        progress: 每进入一步回调一次 progress(步骤描述)，由界面渲染成转圈状态；
+            传 None 则不报告进度。
+    Returns:
+        {
+          "brief": 输入原文,
+          "brief_dict": 解析出的结构化需求,
+          "fallback": 硬性条件是否被放宽（True 时界面要提示）,
+          "recall_count": 进入重排的候选数,
+          "results": Top N 达人，含 daren_id/name/profile_text/score/reason/risk,
+        }
+    """
     if progress:
         progress("加载达人数据与索引")
     df, index = build_index()

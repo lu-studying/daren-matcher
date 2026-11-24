@@ -16,11 +16,18 @@ from src.pipeline.match import run_match
 
 
 def load_eval_set() -> list[dict]:
+    """读取评测集，每行一个 JSON，字段见模块 docstring。"""
     with open(EVAL_FILE, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 
 def main(rerank: bool):
+    """逐条跑评测集，打印命中率。
+
+    Args:
+        rerank: True 走 run_match 完整链路，每个候选一次大模型调用，慢且贵；
+            False 只做解析 + 向量召回，用来快速判断召回环节是否漏人。
+    """
     cases = load_eval_set()
     df, index = build_index()
     hits = 0

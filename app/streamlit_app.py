@@ -29,6 +29,11 @@ if st.button("开始匹配", type="primary", disabled=not brief.strip()):
         step = {"ph": None, "label": ""}
 
         def progress(msg):
+            """推进到下一步：把上一步改写成 ✅ 已完成，再追加一行 🔄 进行中。
+
+            作为 run_match(progress=...) 的回调，靠闭包里的 step 记住上一步，
+            所以步与步之间不会互相覆盖。
+            """
             if step["ph"] is not None:
                 step["ph"].markdown(f"✅ {step['label']}")
             step["ph"] = st.empty()

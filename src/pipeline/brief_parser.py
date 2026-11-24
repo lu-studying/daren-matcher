@@ -15,6 +15,13 @@ SYSTEM = """你是营销投放领域的brief分析专家。把用户的自然语
 
 
 def parse_brief(brief: str) -> dict:
+    """用大模型把自然语言投放需求解析成结构化字典。
+
+    Returns:
+        字段由 SYSTEM 约定：category / platform / audience / budget_total_yuan /
+        followers_w_range / count / style_keywords / hard_requirements，
+        信息不足时为 None。下游按 None 跳过对应过滤，因此不会误杀候选。
+    """
     return chat_json(SYSTEM, brief)
 
 

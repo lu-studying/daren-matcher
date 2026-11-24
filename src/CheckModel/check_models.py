@@ -11,6 +11,11 @@ TEXT = "你好，用一句话回答我"
 
 
 def report(label, resp):
+    """打印一次调用的状态，非 200 时附上百炼的 code 和 message。
+
+    Returns:
+        True 表示这个端点能跑通该模型。
+    """
     if resp.status_code == 200:
         print(f"    [200 OK]   {label}")
         return True
@@ -21,6 +26,7 @@ def report(label, resp):
 
 
 def text_of(resp):
+    """从响应取纯文本，兼容 str 和 [{"text": ...}] 两种 content 形态。"""
     content = resp.output["choices"][0]["message"]["content"]
     if isinstance(content, str):
         return content

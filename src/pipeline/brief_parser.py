@@ -1,3 +1,5 @@
+import re
+
 from src.llm import chat_json
 
 SYSTEM = """你是营销投放领域的brief分析专家。把用户的自然语言投放需求解析成JSON，字段：
@@ -16,6 +18,9 @@ followers_w_range 必须按原意分到下限/上限两侧：「10万以上」�
 count 只填用户明确说的数量：「一个」「一位」→ 1，「5个」→ 5；没说数量就填 null，不要套默认值。
 只输出JSON。信息不足时填 null，不要编造。"""
 
+# 原文里有没有"数量线索"：阿拉伯数字或中文数量词。只用于校验 count，不做全文解析
+_COUNT_HINT = re.compile(r"\d|[一二三四五六七八九十百两]")
+
 
 def parse_brief(brief: str) -> dict:
     """用大模型把自然语言投放需求解析成结构化字典。
@@ -26,7 +31,15 @@ def parse_brief(brief: str) -> dict:
         信息不足时为 None。下游按 None 跳过对应过滤，因此不会误杀候选；
         count 只作需求信息展示，不用于截断推荐条数（系统固定给一批候选供人工审核）。
     """
-    return chat_json(SYSTEM, brief)
+    data = chat_json(SYSTEM, brief)
+    # 模型对"完全没信息"的输入仍可能按训练习惯填个数字，原文里连数量线索都没有时一律视为未提及
+    count = data.get("count")
+    try:
+        count = int(count)
+    except (TypeError, ValueError):
+        count = None
+    data["count"] = count if count and count > 0 and _COUNT_HINT.search(brief) else None
+    return data
 
 
 def to_query_text(brief_dict: dict, raw_brief: str) -> str:

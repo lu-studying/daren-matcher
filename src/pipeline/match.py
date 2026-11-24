@@ -21,7 +21,8 @@ def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
           "brief_dict": 解析出的结构化需求,
           "fallback": 硬性条件是否被放宽（True 时界面要提示）,
           "recall_count": 进入重排的候选数,
-          "results": Top N 达人，含 daren_id/name/profile_text/score/reason/risk,
+          "results": Top RERANK_TOP_N 达人，含 daren_id/name/profile_text/score/reason/risk；
+            brief 里的 count 只作解析结果展示，不用于截断条数（人工审核需要一批可对比的候选）,
         }
     """
     if progress:
@@ -46,6 +47,7 @@ def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
 
     candidates = df.loc[ids][["daren_id", "name", "profile_text"]].to_dict("records")
 
+    # 固定给一批候选而不是按 brief 的 count 截断：系统只做初筛，最终由人对比审核
     if use_llm_rerank:
         if progress:
             progress(f"LLM 重排 {len(candidates)} 个候选")

@@ -18,12 +18,19 @@ st.set_page_config(page_title="达人智能匹配", page_icon="🎯", layout="wi
 st.title("🎯 达人智能匹配工具")
 st.caption("输入投放 brief，自动解析需求 → 硬性过滤 → 语义召回 → 通义千问重排，输出带理由与风险的达人清单。")
 
-brief = st.text_area("投放需求（brief）", height=140, placeholder="例如：我们是……")
-picked = st.selectbox("或直接选一个示例", ["（自定义）", *SAMPLE_BRIEFS])
-if picked != "（自定义）" and not brief:
-    brief = SAMPLE_BRIEFS[picked]
+typed = st.text_area("投放需求（brief）", height=140, placeholder="例如：我们是……")
+if typed.strip() and st.session_state.get("sample") not in (None, "（自定义）"):
+    # 手动输入优先：把遗留的示例选择重置掉，否则下拉框显示的内容会和实际使用的 brief 不一致
+    st.session_state["sample"] = "（自定义）"
+sample = st.selectbox(
+    "或直接选一个示例",
+    ["（自定义）", *SAMPLE_BRIEFS],
+    key="sample",
+    disabled=bool(typed.strip()),
+)
+brief = typed.strip() or SAMPLE_BRIEFS.get(sample, "")
 
-if st.button("开始匹配", type="primary", disabled=not brief.strip()):
+if st.button("开始匹配", type="primary", disabled=not brief):
     log_event(brief, "search")
     with st.status("匹配中", expanded=True) as status:
         step = {"ph": None, "label": ""}
@@ -61,7 +68,10 @@ result = st.session_state.get("result")
 if result:
     if st.session_state.result_brief != brief:
         st.caption("⚠️ 输入已修改，下方结果仍基于上一次提交的内容，点「开始匹配」重算。")
-    st.success(f"召回 {result['recall_count']} 个候选，展示 Top {len(result['results'])}"
+    # brief 要求的人数只作参考：系统固定给一批候选供人工对比审核，不按人数裁到只剩 1 个
+    want = result["brief_dict"].get("count")
+    hint = f"需求方期望 {want} 位，" if want else ""
+    st.success(f"{hint}召回 {result['recall_count']} 个候选，展示 Top {len(result['results'])} 供审核"
                + ("（硬性条件过滤后候选过少，已放宽）" if result["fallback"] else ""))
 
     st.subheader("Brief 解析结果")

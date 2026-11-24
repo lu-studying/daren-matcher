@@ -38,7 +38,7 @@ def main(rerank: bool):
             top_ids = {str(r["daren_id"]) for r in out["results"]}
             expected = set(case.get("expected_daren_ids") or [])
             hit = bool(top_ids & expected)
-            print(f"[rerank] {case['brief'][:30]}... -> Top10命中: {hit}")
+            print(f"[rerank] {case['brief'][:30]}... -> Top{len(out['results'])}命中: {hit}")
         else:
             brief_dict = parse_brief(case["brief"])
             ids = recall(to_query_text(brief_dict, case["brief"]), df, index)

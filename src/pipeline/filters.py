@@ -24,8 +24,13 @@ def hard_filter(df: pd.DataFrame, brief: dict) -> pd.DataFrame:
         mask &= df["platform"].str.contains(brief["platform"].strip(), na=False)
 
     fr = brief.get("followers_w_range")
-    if isinstance(fr, (list, tuple)) and len(fr) == 2 and all(fr):
-        mask &= df["followers_w"].between(float(fr[0]), float(fr[1]))
+    if isinstance(fr, (list, tuple)) and len(fr) == 2:
+        # 单侧为 null 表示该侧不限（如「10万以上」是 [10, null]），只约束有值的一侧
+        low, high = fr
+        if low is not None:
+            mask &= df["followers_w"] >= float(low)
+        if high is not None:
+            mask &= df["followers_w"] <= float(high)
 
     budget = brief.get("budget_total_yuan")
     if budget:

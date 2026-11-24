@@ -4,6 +4,22 @@ from src.pipeline.filters import candidate_ids, hard_filter
 from src.pipeline.rerank import rerank
 
 
+# 能参与匹配的需求字段；count 只作展示，不算"有需求"
+_REQUIREMENT_FIELDS = (
+    "category", "platform", "audience", "budget_total_yuan",
+    "followers_w_range", "style_keywords", "hard_requirements",
+)
+
+
+def _has_requirement(brief_dict: dict) -> bool:
+    """判断解析结果里有没有任何可用于匹配的条件。
+
+    全部为 None/空列表时，说明大模型没从原文里读出需求（比如随手打了几个字），
+    继续跑召回和重排只会白花模型调用的钱。
+    """
+    return any(brief_dict.get(k) for k in _REQUIREMENT_FIELDS)
+
+
 def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
     """完整链路：解析 -> 硬过滤 -> 向量召回 -> LLM重排。
 
@@ -24,14 +40,27 @@ def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
           "results": Top RERANK_TOP_N 达人，含 daren_id/name/profile_text/score/reason/risk；
             brief 里的 count 只作解析结果展示，不用于截断条数（人工审核需要一批可对比的候选）,
         }
+        识别不出需求时提前返回：多一个 "error" 键说明原因，results 为空、其余步骤未执行。
     """
-    if progress:
-        progress("加载达人数据与索引")
-    df, index = build_index()
-
     if progress:
         progress("解析 brief")
     brief_dict = parse_brief(brief)
+
+    # 需求都读不出来就不用往下走了：建索引、召回、重排每步都要花钱
+    if not _has_requirement(brief_dict):
+        return {
+            "brief": brief,
+            "brief_dict": brief_dict,
+            "error": "没有识别出可用的投放条件（品类/平台/人群/预算/粉丝量均未提及），"
+                     "已跳过匹配以免浪费模型调用。请补充需求后再试。",
+            "fallback": False,
+            "recall_count": 0,
+            "results": [],
+        }
+
+    if progress:
+        progress("加载达人数据与索引")
+    df, index = build_index()
 
     if progress:
         progress("硬性条件过滤")

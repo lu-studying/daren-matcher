@@ -48,11 +48,14 @@ if st.button("开始匹配", type="primary", disabled=not brief):
             step["ph"].markdown(f"🔄 {msg}")
 
         new_result = run_match(brief, progress=progress)
+        failed = bool(new_result.get("error"))
         if step["ph"] is not None:
-            step["ph"].markdown(f"✅ {step['label']}")
-        status.update(label="匹配完成", state="complete", expanded=True)
+            step["ph"].markdown(f"{'⚠️' if failed else '✅'} {step['label']}")
+        status.update(label="需求未识别" if failed else "匹配完成",
+                      state="error" if failed else "complete", expanded=True)
 
-    save_run(brief, new_result)
+    if not failed:
+        save_run(brief, new_result)  # 没跑完的匹配不进历史记录
     st.session_state.result = new_result
     st.session_state.result_brief = brief
     st.session_state.feedback = {}
@@ -66,6 +69,12 @@ if "result" not in st.session_state:
 
 result = st.session_state.get("result")
 if result:
+    if result.get("error"):
+        st.warning(result["error"])
+        st.subheader("Brief 解析结果")
+        st.json(result["brief_dict"])
+        st.stop()  # 没有可用条件，不渲染推荐清单
+
     if st.session_state.result_brief != brief:
         st.caption("⚠️ 输入已修改，下方结果仍基于上一次提交的内容，点「开始匹配」重算。")
     # brief 要求的人数只作参考：系统固定给一批候选供人工对比审核，不按人数裁到只剩 1 个

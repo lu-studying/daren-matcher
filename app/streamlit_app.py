@@ -18,7 +18,7 @@ st.set_page_config(page_title="达人智能匹配", page_icon="🎯", layout="wi
 st.title("🎯 达人智能匹配工具")
 st.caption("输入投放 brief，自动解析需求 → 硬性过滤 → 语义召回 → 通义千问重排，输出带理由与风险的达人清单。")
 
-typed = st.text_area("投放需求（brief）", height=140, placeholder="例如：我们是……")
+typed = st.text_area("投放需求（brief）", height=140, placeholder="例如：我们是一款主打敏感肌的国产面霜，客单价150元，想在小红书找5个美妆达人做测评种草，总预算3万，粉丝量1-20万都可以，风格要真实测评感，不要硬广")
 if typed.strip() and st.session_state.get("sample") not in (None, "（自定义）"):
     # 手动输入优先：把遗留的示例选择重置掉，否则下拉框显示的内容会和实际使用的 brief 不一致
     st.session_state["sample"] = "（自定义）"

@@ -1,3 +1,4 @@
+from src.config import RERANK_MAX_CANDIDATES
 from src.data.vector_store import build_index, recall
 from src.pipeline.brief_parser import parse_brief, to_query_text
 from src.pipeline.filters import candidate_ids, hard_filter
@@ -35,8 +36,8 @@ def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
         {
           "brief": 输入原文,
           "brief_dict": 解析出的结构化需求,
-          "fallback": 硬性条件是否被放宽（True 时界面要提示）,
-          "recall_count": 进入重排的候选数,
+          "fallback": 硬性条件被放宽时的说明（None 表示没放宽，界面按真值判断是否提示）,
+          "recall_count": 进入重排的候选数（已按 RERANK_MAX_CANDIDATES 截断）,
           "results": Top RERANK_TOP_N 达人，含 daren_id/name/profile_text/score/reason/risk；
             brief 里的 count 只作解析结果展示，不用于截断条数（人工审核需要一批可对比的候选）,
         }
@@ -53,7 +54,7 @@ def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
             "brief_dict": brief_dict,
             "error": "没有识别出可用的投放条件（品类/平台/人群/预算/粉丝量均未提及），"
                      "已跳过匹配以免浪费模型调用。请补充需求后再试。",
-            "fallback": False,
+            "fallback": None,
             "recall_count": 0,
             "results": [],
         }
@@ -70,9 +71,11 @@ def run_match(brief: str, use_llm_rerank: bool = True, progress=None) -> dict:
         progress("向量召回")
     ids = recall(to_query_text(brief_dict, brief), df, index)
     ids = candidate_ids(df, rows, ids)
-    if not ids:  # 过滤后无候选时退回全量召回
-        ids = recall(to_query_text(brief_dict, brief), df, index)
-        fallback = True
+    # 语义 Top-K 没覆盖到过滤结果时（达人量超过 RECALL_TOP_K），用过滤结果补位；
+    # 这里不能退回全量召回，否则前面花钱过滤的候选又被放回来了
+    if not ids and len(rows):
+        ids = list(rows.index)
+    ids = ids[:RERANK_MAX_CANDIDATES]
 
     candidates = df.loc[ids][["daren_id", "name", "profile_text"]].to_dict("records")
 

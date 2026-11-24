@@ -10,7 +10,7 @@ from src.feedback import feedback_by_brief, latest_run, log_event, save_run, sta
 from src.pipeline.match import run_match
 
 SAMPLE_BRIEFS = {
-    "美妆·新品面霜": "我们是一款主打敏感肌的国产面霜，客单价150元，想在小红书找5个美妆达人做测评种草，总预算3万，粉丝量1-20万都可以，风格要真实测评感，不要硬广。",
+    "美妆·新品面霜": "我们是一款主打敏感肌的国产面霜，客单价150元，想在小红书找3个美妆达人做测评种草，总预算10万，粉丝量1-20万都可以，风格要真实测评感，不要硬广。",
     "3C·智能耳机": "新品降噪耳机发布，预算10万，想在抖音找3个科技数码达人做开箱视频，粉丝50万以上，最好有对比评测经验。",
     "食品·代餐零食": "新上线一款低卡代餐棒，想找B站和小红书的美食区达人带货，预算2万，粉丝量级不限，内容要有趣味性。",
 }
@@ -119,8 +119,10 @@ with tab_match:
         # brief 要求的人数只作参考：系统固定给一批候选供人工对比审核，不按人数裁到只剩 1 个
         want = result["brief_dict"].get("count")
         hint = f"需求方期望 {want} 位，" if want else ""
-        st.success(f"{hint}召回 {result['recall_count']} 个候选，展示 Top {len(result['results'])} 供审核"
-                   + ("（硬性条件过滤后候选过少，已放宽）" if result["fallback"] else ""))
+        # 历史 run 里的 fallback 是布尔值，新结果才是放宽说明，两种都要能显示
+        relaxed = result.get("fallback")
+        relaxed_note = f"（{relaxed}）" if isinstance(relaxed, str) else ("（硬性条件已放宽）" if relaxed else "")
+        st.success(f"{hint}召回 {result['recall_count']} 个候选，展示 Top {len(result['results'])} 供审核{relaxed_note}")
 
         st.subheader("Brief 解析结果")
         st.json(result["brief_dict"])

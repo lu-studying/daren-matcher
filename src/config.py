@@ -19,3 +19,5 @@ FEEDBACK_DB = ROOT / "data" / "feedback.db"
 
 RECALL_TOP_K = 50
 RERANK_TOP_N = 10
+# 进入重排的候选上限：重排是逐条调模型，不设上限时一次匹配的耗时和费用都不可控
+RERANK_MAX_CANDIDATES = 20
